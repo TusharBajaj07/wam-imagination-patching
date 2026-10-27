@@ -1,0 +1,6 @@
+# Laptop side: launching Modal jobs, analysis, figures. GPU-side dependencies are pinned in wam/modal_app.py.
+modal
+numpy
+matplotlib
+imageio[ffmpeg]
+pillow

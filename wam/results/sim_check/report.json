@@ -1,0 +1,98 @@
+{
+ "env": {
+  "env_build_s": 8.28,
+  "step_ms": 194.9,
+  "task": "open the middle drawer of the cabinet",
+  "n_init_states": 50,
+  "obs_keys": [
+   "agentview_image",
+   "akita_black_bowl_1_pos",
+   "akita_black_bowl_1_quat",
+   "akita_black_bowl_1_to_robot0_eef_pos",
+   "akita_black_bowl_1_to_robot0_eef_quat",
+   "cream_cheese_1_pos",
+   "cream_cheese_1_quat",
+   "cream_cheese_1_to_robot0_eef_pos",
+   "cream_cheese_1_to_robot0_eef_quat",
+   "object-state",
+   "plate_1_pos",
+   "plate_1_quat",
+   "plate_1_to_robot0_eef_pos",
+   "plate_1_to_robot0_eef_quat",
+   "robot0_eef_pos",
+   "robot0_eef_quat",
+   "robot0_eye_in_hand_image",
+   "robot0_gripper_qpos",
+   "robot0_gripper_qvel",
+   "robot0_joint_pos",
+   "robot0_joint_pos_cos",
+   "robot0_joint_pos_sin",
+   "robot0_joint_vel",
+   "robot0_proprio-state",
+   "wine_bottle_1_pos",
+   "wine_bottle_1_quat",
+   "wine_bottle_1_to_robot0_eef_pos",
+   "wine_bottle_1_to_robot0_eef_quat"
+  ],
+  "image_shape": [
+   256,
+   256,
+   3
+  ],
+  "eef_pos": [
+   -0.217,
+   0.009,
+   1.171
+  ]
+ },
+ "episodes": [
+  {
+   "suite": "libero_goal",
+   "task_id": 0,
+   "task": "open the middle drawer of the cabinet",
+   "init": 0,
+   "mode": "idm",
+   "success": true,
+   "steps": 123,
+   "decisions": 13,
+   "plan_s_mean": 1.1067574941194975,
+   "episode_s": 17.9
+  },
+  {
+   "suite": "libero_goal",
+   "task_id": 0,
+   "task": "open the middle drawer of the cabinet",
+   "init": 1,
+   "mode": "idm",
+   "success": true,
+   "steps": 124,
+   "decisions": 13,
+   "plan_s_mean": 1.0800584462972789,
+   "episode_s": 17.6
+  },
+  {
+   "suite": "libero_goal",
+   "task_id": 0,
+   "task": "open the middle drawer of the cabinet",
+   "init": 0,
+   "mode": "first_frame",
+   "success": true,
+   "steps": 125,
+   "decisions": 13,
+   "plan_s_mean": 0.6063090471120981,
+   "episode_s": 11.4
+  },
+  {
+   "suite": "libero_goal",
+   "task_id": 0,
+   "task": "open the middle drawer of the cabinet",
+   "init": 1,
+   "mode": "first_frame",
+   "success": true,
+   "steps": 118,
+   "decisions": 12,
+   "plan_s_mean": 0.6087013483047485,
+   "episode_s": 10.8
+  }
+ ]
+}

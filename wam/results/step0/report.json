@@ -1,0 +1,120 @@
+{
+ "1_load": {
+  "payload_keys": [
+   "mot",
+   "proprio_encoder",
+   "step",
+   "torch_dtype"
+  ],
+  "mot_tensors_in_ckpt": 1649,
+  "mot_missing": [],
+  "mot_unexpected": [],
+  "proprio_encoder": "loaded strict",
+  "build_seconds": 81.9,
+  "params_video_expert": 4999787712,
+  "params_action_expert": 1020886023,
+  "dtype": "torch.bfloat16"
+ },
+ "gpu_mem_after_load_GB": 24.83,
+ "state": {
+  "episode": 0,
+  "t": 20,
+  "length": 138,
+  "task": "open the middle drawer of the cabinet",
+  "image": [
+   1,
+   3,
+   224,
+   448
+  ],
+  "proprio_norm": [
+   0.097,
+   -0.07,
+   0.576,
+   0.366,
+   0.17,
+   -0.082,
+   0.881,
+   -0.886
+  ]
+ },
+ "2_shapes": {
+  "layers": 30,
+  "k_shape": [
+   1,
+   294,
+   3072
+  ],
+  "v_shape": [
+   1,
+   294,
+   3072
+  ],
+  "tokens_per_frame": 98,
+  "video_tokens": 294,
+  "action_mask_shape": [
+   32,
+   326
+  ],
+  "latents_video": [
+   1,
+   48,
+   3,
+   14,
+   28
+  ],
+  "action": [
+   32,
+   7
+  ]
+ },
+ "2_action_mask_allowed_keys": {
+  "video_current": 98,
+  "video_future": 196,
+  "action": 32
+ },
+ "3_faithful": {
+  "max_abs_diff_vs_official": 0.0,
+  "dist_vs_official": 0.0,
+  "video_latent_max_abs_diff": 0.0
+ },
+ "4_determinism": {
+  "dist_rerun": 0.0
+ },
+ "5_selfpatch": {
+  "dist": 0.0
+ },
+ "6_noise_floor": {
+  "seed_spread_full_pipeline": [
+   0.2663,
+   0.2592,
+   0.2479,
+   0.2043
+  ],
+  "seed_spread_action_noise_only": [
+   0.1059,
+   0.0898,
+   0.0948,
+   0.1217
+  ],
+  "dist_to_demo_actions": 0.4064,
+  "norm_of_action_chunk": 8.0727
+ },
+ "7_modes": {
+  "dist_firstframe_vs_idm": 0.3021,
+  "dist_firstframe_to_demo": 0.4009
+ },
+ "8_timing_s": {
+  "prepare": 0.671,
+  "imagine": 0.307,
+  "prefill": 0.029,
+  "act": 0.28,
+  "official_idm_total": 0.614
+ },
+ "gpu_mem_peak_GB": 25.48,
+ "9_frames": {
+  "n_decoded": 9,
+  "future_latent_rel_error_imagined_vs_real": 0.2478,
+  "current_latent_max_abs_diff": 0.0
+ }
+}

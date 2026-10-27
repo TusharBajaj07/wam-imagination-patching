@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this code or these results, please cite the paper."
+title: "Do World Action Models Act on What They Imagine? Causal Evidence from Patching the Imagined Future"
+authors:
+  - family-names: Bajaj
+    given-names: Tushar
+    affiliation: Indian Institute of Technology Bombay
+    email: 23b2107@iitb.ac.in
+license: MIT
+repository-code: "https://github.com/TusharBajaj07/wam-imagination-patching"
+date-released: 2026-10-27
