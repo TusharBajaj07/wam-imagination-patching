@@ -1,3 +1,4 @@
+\pdfoutput=1
 \documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
 \usepackage{cite}
@@ -18,7 +19,7 @@
 
 \begin{document}
 
-\title{Do World Action Models Act on What They Imagine?\\
+\title{Do World Action Models Act\\ on What They Imagine?\\
 Causal Evidence from Patching the Imagined Future}
 
 \author{%
@@ -276,7 +277,7 @@ other task, disturb the action by only a fifth to a half as much. Conversely, on
 future is known, supplying it brings the action to \nTrueToDemo{} from the demonstrated action, against \nCleanToDemo{}
 with the model's own imagination: the action pathway behaves as an inverse dynamics reader of whatever future it is
 given. Two further observations bear on the test-time debate. Knocking out attention to the future reproduces
-first-frame mode exactly, confirming that the two modes differ only in this read. And on demonstrations, first-frame
+first-frame mode up to numerical precision, confirming that the two modes differ only in this read. And on demonstrations, first-frame
 actions are as close to the demonstrated action as imagine-mode actions (\nFFToDemo{} vs.\ \nCleanToDemo), so the
 imagination is not needed for open-loop accuracy, even though it dominates the action when present.
 Section~\ref{sec:closed} finds the same in closed loop.
@@ -297,7 +298,8 @@ effect (\nBandThreeFresh). Swapping single layers locates the largest contributi
 (Fig.~\ref{fig:attn}). We recorded the attention weights in the same runs, recomputing them in full precision (the
 grouped outputs reconstruct the model's attention output to within $\nReconErr$). Action tokens give 19--77\% of their
 attention to the future in every layer, and more than its token share only in layers 16--25 (peak \nRfutPeak$\times$ at
-layer \nRfutPeakLayer); layers 27--30 attend mostly to the other action tokens (\nMactLateLo--\nMactLateHi). The
+layer \nRfutPeakLayer); in layers 27--30 the other action tokens take \nMactLateLo--\nMactLateHi{} of the attention, against at most
+\nMactMidMax{} in layers 2--26. The
 layers that attend most to the future are thus not the ones whose future the action depends on, a dissociation of the
 kind cautioned against in~\cite{jain2019attention}. All results replicate between training and fresh states.
 
@@ -346,9 +348,9 @@ behavior; for example, with the late layers swapped, a robot told to put the bow
 the wine bottle on the rack picked up the bowl, set it down on the stove instead, and stayed there until the time limit.
 
 \textbf{A threshold, not a linear dial.} Blending the two futures (Fig.~\ref{fig:localize}, right) leaves behavior
-unchanged at $\alpha = 0.25$ (A \nAlphaQA\%), mixed at $0.5$ (A \nAlphaHA\%, B \nAlphaHB\%), and mostly flipped at
-$0.75$ (A \nAlphaTQA\%, B \nAlphaTQB\%). A minority share of a foreign future is ignored; the policy commits once
-the foreign future dominates.
+unchanged at $\alpha = 0.25$ (A \nAlphaQA\%), mixed at $0.5$ (A \nAlphaHA\%, B \nAlphaHB\%), and A is mostly
+suppressed at $0.75$ (A \nAlphaTQA\%, B \nAlphaTQB\%). A minority share of a foreign future is ignored;
+task~A gives way once the foreign future dominates.
 
 % ======================================================================================================
 \section{Mechanism: What Is Read, and Where It Is Decided}

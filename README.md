@@ -99,11 +99,14 @@ modal run wam/modal_app.py --script step0
 # 4. Open loop on training frames (one run per seed)
 modal run wam/modal_app.py --script pilot_future_swap --args "--eps-per-task 2 --t-per-ep 5 --seed 0 --single-layer --attn"
 
-# 5. Closed loop (LIBERO-Goal, 10 tasks x 5 starts); add --seed 0 / --seed 1 for the other seeds
+# 5. Closed loop (LIBERO-Goal, 10 tasks x 5 starts). Give every seed its own --file: runs append to the file, and
+#    the analysis rejects a file that holds the same (task, start) twice.
 modal run wam/modal_app.py --sim --script flip_test --args "--cond clean --inits 5 --save-states"
-modal run wam/modal_app.py --sim --script flip_test --args "--cond textB --inits 5"
-modal run wam/modal_app.py --sim --script flip_test --args "--cond futureB --inits 5"
-modal run wam/modal_app.py --sim --script flip_test --args "--cond noimagine --inits 5 --file noimagine_s42.jsonl"
+for s in 42 0 1; do
+  for c in clean textB futureB noimagine; do
+    modal run wam/modal_app.py --sim --script flip_test --args "--cond $c --inits 5 --seed $s --file ${c}_s$s.jsonl"
+  done
+done
 modal run wam/modal_app.py --sim --script flip_test --args "--cond futureB --inits 5 --layers 21-30 --file futureB_L21-30.jsonl"
 modal run wam/modal_app.py --sim --script flip_test --args "--cond futureB --inits 5 --alpha 0.5 --file futureB_a0.5.jsonl"
 
@@ -114,10 +117,25 @@ modal run wam/modal_app.py --script pilot_future_swap --args "--source rollouts 
 modal run wam/modal_app.py --script phase2 --args "--per-ep 2 --seed 0 --tag s0"
 modal run wam/modal_app.py --script phase2 --args "--lens-only --lens-bands all,L21-30,L1-20 --tag lens3"
 
-# 8. Analysis and paper figures (laptop)
-python wam/analyze_flip.py wam/results/phase1/flip_test
+# 8. Analysis and paper figures (laptop). First copy the result files from the Modal volume, e.g.
+#    modal volume get wam-interp-out flip_test/clean_s0.jsonl wam/results/phase1/flip_test/
+python wam/analyze_flip.py wam/results/flip_test        # seed 42, first runs -> flip_summary.json
+D=wam/results/phase1/flip_test
+python wam/analyze_flip.py $D clean_s42=clean_s42.jsonl clean_s0=clean_s0.jsonl clean_s1=clean_s1.jsonl \
+  textB_s42=textB_s42.jsonl textB_s0=textB_s0.jsonl textB_s1=textB_s1.jsonl \
+  "futB_s42=futureB_s42.jsonl+futureB_s42_part_*.jsonl" futB_s0=futureB_s0.jsonl futB_s1=futureB_s1.jsonl \
+  --out phase1_seeds.json
+python wam/analyze_flip.py $D "all_s42=futureB_s42.jsonl+futureB_s42_part_*.jsonl" L21-30=futureB_L21-30.jsonl \
+  L26+28=futureB_L26_28.jsonl L1-20=futureB_L1-20.jsonl a0.25=futureB_a0.25.jsonl a0.5=futureB_a0.5.jsonl \
+  a0.75=futureB_a0.75.jsonl --out phase1_layers_dose.json
+python wam/analyze_flip.py $D clean_s42=clean_s42.jsonl clean_s0=clean_s0.jsonl clean_s1=clean_s1.jsonl \
+  noimag_s42=noimagine_s42.jsonl noimag_s0=noimagine_s0.jsonl noimag_s1=noimagine_s1.jsonl --out noimagine_summary.json
 python paper/make_figs.py
 ```
+
+The committed `analysis.json` files already contain the attention results. Do not re-run `wam/analyze_pilot.py` on
+them without the run's `attn.npz` (not included, see below): it then writes `analysis.json` without the attention
+section, and `paper/make_figs.py` fails.
 
 Long closed-loop runs are easier through the deployed app (`modal deploy wam/modal_app.py`, then
 `python wam/launch.py --sim flip_test "<args>"`), which keeps running if your laptop sleeps.

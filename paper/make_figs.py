@@ -204,6 +204,7 @@ N["MedStepsClean"] = f"{np.median(flip['clean']['A_steps_success']):.0f}"
 N["MedStepsFutB"] = f"{np.median(flip['futureB']['B_step']):.0f}"
 mact = [r["M"]["act"] for r in fresh["attention"][26:30]]
 N["MactLateLo"], N["MactLateHi"] = f"{min(mact):.2f}", f"{max(mact):.2f}"
+N["MactMidMax"] = f"{max(r['M']['act'] for r in fresh['attention'][1:26]):.2f}"   # layers 2-26
 stp = fresh["attention_by_step_M_fut"]
 N["MfutStepFirst"], N["MfutStepLast"] = f"{stp[0]:.2f}", f"{stp[-1]:.2f}"
 N["ReconErr"] = f"{fresh['attention_reconstruction_error_max']:.0e}".replace("e-0", "\\times10^{-") + "}"
