@@ -4,7 +4,7 @@
 
 Tushar Bajaj · Indian Institute of Technology Bombay · [23b2107@iitb.ac.in](mailto:23b2107@iitb.ac.in)
 
-[Paper (PDF)](paper/Bajaj_WAM_imagination_v1.pdf) · arXiv: coming soon
+[Paper (PDF)](paper/Bajaj_WAM_imagination.pdf) · arXiv: coming soon
 
 <p align="center">
   <img src="assets/flip_futureB.gif" width="760" alt="Closed-loop rollouts: each robot is told task A but its imagined future is replaced by the one imagined for task B">
@@ -22,6 +22,8 @@ that the action transformer reads.
   noise floor and moves it to that task's action; swapping the current frame barely matters.
 - **The robot does what it imagines, not what it is told.** Told A while imagining B, the robot completes **B in 113 of
   150** closed-loop episodes and A in 4. Told B while imagining A, it does A (94%) and never B.
+- **It does not need the imagination, but follows it when present.** With imagination switched off (first-frame
+  mode), it completes A in 145 of 150 episodes, as often as normal (147), so success rates alone hide this dependence.
 - **The last ten layers decide.** Swapping only layers 21-30 suppresses A (12%) and produces B (50%); layers 1-20 do
   nothing (98% A), even though attention to the future peaks around layer 20.
 - **Early layers read, late layers decide.** A tuned action lens shows early layers already encode B, but layers 21-30
@@ -32,6 +34,7 @@ that the action transformer reads.
 | Closed loop (10 tasks x 5 starts x 3 seeds) | Task A done | Task B done |
 |---|---|---|
 | Normal (imagine A, told A) | 147 / 150 | 0 / 150 |
+| Imagination off (first-frame mode, told A) | 145 / 150 | 0 / 150 |
 | Swap instruction (imagine A, told B) | 141 / 150 | 0 / 150 |
 | **Swap imagination (imagine B, told A)** | **4 / 150** | **113 / 150** |
 
@@ -63,7 +66,8 @@ wam/
   step0.py               validation: weights, cache shapes, bit-identical reproduction, timing
   pilot_future_swap.py   open loop: replace the future (other task / mean / noise / static / knockout), layer bands,
                          single layers, attention recording
-  flip_test.py           closed loop: clean / futureB (swap imagination) / textB (swap instruction), --layers, --alpha
+  flip_test.py           closed loop: clean / futureB (swap imagination) / textB (swap instruction) /
+                         noimagine (first-frame mode), --layers, --alpha
   phase2.py              mechanism: partial-future swaps, single heads, raw and tuned action lens
   analyze_*.py           laptop-side analysis (bootstrap and Wilson intervals)
   render_videos.py       npz frames -> captioned mp4 grids
@@ -99,6 +103,7 @@ modal run wam/modal_app.py --script pilot_future_swap --args "--eps-per-task 2 -
 modal run wam/modal_app.py --sim --script flip_test --args "--cond clean --inits 5 --save-states"
 modal run wam/modal_app.py --sim --script flip_test --args "--cond textB --inits 5"
 modal run wam/modal_app.py --sim --script flip_test --args "--cond futureB --inits 5"
+modal run wam/modal_app.py --sim --script flip_test --args "--cond noimagine --inits 5 --file noimagine_s42.jsonl"
 modal run wam/modal_app.py --sim --script flip_test --args "--cond futureB --inits 5 --layers 21-30 --file futureB_L21-30.jsonl"
 modal run wam/modal_app.py --sim --script flip_test --args "--cond futureB --inits 5 --alpha 0.5 --file futureB_a0.5.jsonl"
 

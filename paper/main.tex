@@ -31,19 +31,21 @@ Mumbai, India\\
 \maketitle
 
 \begin{abstract}
-World action models (WAMs) generate a short video of the future and then predict robot actions from it. Whether
-the imagined future matters at test time is disputed, and the debate rests on task success rates alone. We open the
-model instead. Using Fast-WAM, whose released checkpoint acts from one set of weights through a per-layer key/value
-cache of its imagined video, we replace the imagined future inside that cache and measure the effect on the action and
-on closed-loop behavior in LIBERO. Replacing the imagined future with the one imagined for another task turns the
-predicted action into that task's action (a change \nRatioFresh$\times$ the sampling noise floor). In closed loop, a robot
-told to do task~A while imagining task~B completes~B in \nFutBPooled{} of 150 episodes (\nFutBPooledPct\%) and~A in
-\nFutAPooled; telling it~B while it imagines~A leaves it doing~A (\nTextAPooledPct\%). The effect is localized:
-patching layers 21--30 alone suppresses task~A, while patching layers 1--20 changes nothing, even though attention
-to the future peaks in the middle layers. An action lens shows why: early layers do encode the imagined task, but
-the late layers decide, and they overwrite earlier layers when the two disagree. The action reads mainly the tokens
-where the imagined futures differ, through a few attention heads. The imagined future is therefore a strong control
-channel of this WAM, with direct consequences for monitoring and steering such policies.
+World action models (WAMs) are robot policies that imagine a short video of the future and then choose actions
+from it. Whether the imagined video affects what the robot does is disputed, and the debate rests on task success rates
+alone. We look inside the model instead. Fast-WAM's action network reads the imagined video through a per-layer
+key/value cache, so we can replace the imagined video with another one and keep everything else fixed. Given the video
+it imagined for a different task, the model plans the movement for that task, although its instruction is unchanged;
+the change is \nRatioFresh{} times the model's own run-to-run variation. In closed-loop LIBERO simulation, a robot told
+to do task~A but given task~B's imagined video completes~B in \nFutBPooled{} of 150 episodes (\nFutBPooledPct\%)
+and~A in \nFutAPooled. Giving it B's instruction while it imagines~A has no such effect: it still does~A
+(\nTextAPooledPct\%). With imagination switched off it also does~A, as often as normal (\nNoImgAPooledPct\% vs.\
+\nCleanAPooledPct\%), so success rates alone cannot reveal this dependence. The effect comes from the last ten of the 30 layers. Replacing the video only in layers 21--30
+drops task~A to \nBandLateA\%, while replacing it only in layers 1--20 changes nothing, even though layers 16--25 attend
+most to the imagined video. Decoding the action after each layer shows why: early layers register the other task, but
+the last ten layers decide and override them. The action relies mostly on the parts of the imagined video where the two
+tasks differ, read through a few attention heads. In this WAM, the imagined video, more than the instruction, decides
+what the robot does, which matters for monitoring and steering such policies.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -57,14 +59,15 @@ Robot policies built on pretrained video generators, which we call world action 
 usage~\cite{ye2026dreamzero,yuan2026fastwam}, predict future video and actions
 together~\cite{du2023unipi,wu2023gr1,tian2024seer,ye2026dreamzero,bi2026motus2}. A common design first
 \emph{imagines} the next frames and then infers the actions that would produce them, in the manner of an inverse
-dynamics model (IDM). Imagining is expensive: it multiplies inference time. This raises a basic question with a
+dynamics model (IDM). Imagining is expensive: in Fast-WAM it roughly doubles the time per decision. This raises a basic question with a
 practical cost attached: \emph{does the policy act on what it imagines?}
 
 The question is open. Fast-WAM~\cite{yuan2026fastwam} reports that removing test-time imagination costs little,
 while removing video co-training costs much, and concludes that the benefit of video lies in training. A follow-up
 disputes the test-time claim~\cite{li2026lawa}. Both arguments compare success rates between models or modes. A
-success rate cannot tell whether a policy that imagines actually \emph{reads} its imagination: a model could imagine
-faithfully and act from the current frame alone, or lean on the imagined future and still succeed for other reasons.
+success rate cannot tell whether a policy that imagines actually \emph{reads} its imagination. A policy that ignores its
+imagination and one that is steered by it can succeed equally often, and we find that Fast-WAM is a case of this:
+it succeeds as often with imagination switched off, yet when it imagines, the imagination decides what it does.
 
 We answer the question causally, from inside the model. Fast-WAM's released Optional-IDM checkpoint is
 well suited to this. One set of weights imagines a future clip with a video transformer, freezes it into a per-layer
@@ -76,16 +79,15 @@ retraining. We use this handle in three stages, each building on the last:
   future with alternatives. The action follows the imagined future, far more than the current frame, and the effect
   sits in the last ten layers although attention to the future peaks earlier (Sec.~\ref{sec:open}).
 \item \textbf{Closed loop.} In simulation, swapping in another task's imagined future at every decision makes the
-  robot perform the other task; swapping the instruction does not. Late layers alone are enough (Sec.~\ref{sec:closed}).
+  robot perform the other task; swapping the instruction does not, and switching imagination off leaves success
+  unchanged. Late layers alone are enough (Sec.~\ref{sec:closed}).
 \item \textbf{Mechanism.} We locate what is read and where the decision forms: the tokens where imagined futures
   differ, decoded by early layers but decided by late layers, through a few heads (Sec.~\ref{sec:mech}).
 \end{enumerate}
 Recent work has shown that WAMs depend on their future cache: masking or scrambling it lowers closed-loop
 success~\cite{zhang2026rift}, and attention to future frames has been proposed as a measure of reliance on
 them~\cite{mishra2026temporal}. We go further and ask \emph{what} the action takes from the imagined future and
-\emph{where}. A coherent future imagined for another task redirects the robot to that task, while another task's
-instruction does not; the effect is carried by the last ten layers rather than by the layers that attend most to the
-future; and a lens on the action stream shows the decision forming there. To our knowledge this is the first
+\emph{where} in the network it is used. To our knowledge this is the first
 layer-level causal account of how a WAM uses its imagined future, measured both on the action and on closed-loop
 task outcome.
 
@@ -183,7 +185,8 @@ modes from the same weights. In \emph{IDM mode}, the video transformer generates
 steps~\cite{lipman2022flow,liu2022rectified}, with the current frame clamped; the finished clip is passed through the
 video transformer once more to fill a KV cache at every layer; the action transformer then denoises a chunk of 32
 seven-dimensional actions (end-effector translation and rotation, gripper) in 10 steps, its layer~$\ell$ attending to
-cache layer~$\ell$ and to the other action tokens. In \emph{first-frame mode}, the action reads only the current frame.
+cache layer~$\ell$ and to the other action tokens. In \emph{first-frame mode}, nothing is imagined: the video
+transformer runs once on the current frame alone, so the cache, and hence the action, holds only the current frame.
 
 Both cameras (224$\times$224 each) are placed side by side and encoded by the video autoencoder, which compresses 16$\times$
 in space and 4$\times$ in time; with 2$\times$2 patches, each latent frame becomes 98 tokens (a 7$\times$14 grid, main
@@ -229,11 +232,11 @@ output exactly. Experiments use bf16 on single NVIDIA L40S GPUs (one decision: 0
 \textbf{Tasks and states.} LIBERO-Goal has ten tasks in one kitchen scene (drawers, stove, bowl, plate, wine bottle and
 rack, cream cheese), so the goal of any task can be checked on any simulator state. We pair task~A with
 B $= (A+5) \bmod 10$ (e.g., ``open the middle drawer of the cabinet'' with ``push the plate to the front of the stove''). Open-loop
-analyses use 100 states: first training demonstrations (10 tasks $\times$ 2 episodes $\times$ 5 time points, three seeds),
-then 100 fresh states saved from our own closed-loop rollouts (2 decisions from each of 50 episodes), which the model
-never trained on; the donor is a state of a different task. Closed-loop runs follow the official evaluation (wait
+analyses use two sets of 100 states: training demonstrations (10 tasks $\times$ 2 episodes $\times$ 5 time points,
+three seeds) and fresh states saved from our own closed-loop rollouts (2 decisions from each of 50 episodes), which
+the model never trained on; the donor is a state of a different task. Closed-loop runs follow the official evaluation (wait
 30 steps, re-plan every 10 steps, 400-step limit) for 10 tasks $\times$ 5 LIBERO starting states, at seed 42 and,
-for the main comparison, seeds 0 and 1. At every decision the donor is imagined from the robot's current observation
+for the main comparison, seeds 0 and 1 (150 episodes per condition). At every decision the donor is imagined from the robot's current observation
 with B's instruction, and B's goal is checked on the same simulator state. Intervals are 95\% bootstrap over episodes
 (open loop) or Wilson intervals (success rates).
 
@@ -268,14 +271,15 @@ Other task's future, layers 1--10 & \nBandOneTrain & \nBandOneFresh \\
 \textbf{The action is rewritten by the imagined future.} Replacing the imagined future with one imagined for another
 task changes the action by \nDonorFresh{} on fresh states, \nRatioFresh$\times$ the noise floor, and moves it to within
 \nDonorToDonorFresh{} of that task's own action, from \nCleanToDonorFresh{} (Table~\ref{tab:open}). Replacing the
-current frame instead changes it by only \nPresentFresh. Uninformative futures (mean, static, noise) disturb the action
-by a fifth to a half as much without steering it anywhere. Conversely, on demonstrations where the true
+current frame instead changes it by only \nPresentFresh. Uninformative futures (mean, static, noise), which carry no
+other task, disturb the action by only a fifth to a half as much. Conversely, on demonstrations where the true
 future is known, supplying it brings the action to \nTrueToDemo{} from the demonstrated action, against \nCleanToDemo{}
 with the model's own imagination: the action pathway behaves as an inverse dynamics reader of whatever future it is
 given. Two further observations bear on the test-time debate. Knocking out attention to the future reproduces
 first-frame mode exactly, confirming that the two modes differ only in this read. And on demonstrations, first-frame
 actions are as close to the demonstrated action as imagine-mode actions (\nFFToDemo{} vs.\ \nCleanToDemo), so the
 imagination is not needed for open-loop accuracy, even though it dominates the action when present.
+Section~\ref{sec:closed} finds the same in closed loop.
 
 \begin{figure}[t]
 \centering
@@ -304,20 +308,27 @@ kind cautioned against in~\cite{jain2019attention}. All results replicate betwee
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figs/flip_seeds.pdf}
-\caption{Closed loop, 10 tasks $\times$ 5 starting states $\times$ 3 seeds. Bars: mean over seeds; dots: individual
-seeds. ``Done'' means the task's goal was satisfied in the simulator.}
+\caption{Closed loop, 10 tasks $\times$ 5 starting states $\times$ 3 seeds (150 episodes per condition). Bars: mean
+over seeds; dots: individual seeds. ``Done'' means the task's goal was satisfied in the simulator. Imagination off:
+first-frame mode.}
 \label{fig:flip}
 \end{figure}
 
-We now apply Eq.~\eqref{eq:patch} at every decision of a full episode. In the normal policy the robot completes task~A in
-\nCleanAPooled{} of 150 episodes. If the action transformer is told B while the cache holds A's imagination, it still
+We now apply Eq.~\eqref{eq:patch} at every decision of a full episode and compare four conditions
+(Fig.~\ref{fig:flip}). In the normal policy the robot completes task~A in \nCleanAPooled{} of 150 episodes
+(\nCleanASeeds{} per seed). With imagination switched off (first-frame mode, in which Fast-WAM reports little
+loss), it completes A in \nNoImgAPooled{} (\nNoImgASeeds); the 95\% intervals, \nCleanACILo--\nCleanACIHi\% and
+\nNoImgACILo--\nNoImgACIHi\%, overlap almost entirely, and A is reached as quickly (median \nMedStepsNoImgPooled{} vs.\
+\nMedStepsCleanPooled{} steps). If the action transformer is told B while the cache holds A's imagination, it still
 completes A in \nTextAPooled{} of 150 episodes (\nTextASeeds{} per seed) and never B. If instead the cache holds B's
 imagined future while the action is told A, the robot completes A in \nFutAPooled{} episodes and B in
-\nFutBPooled{} (\nFutBSeeds{} per seed; Fig.~\ref{fig:flip}). It does so fluently: B's goal is reached after a median of
-\nMedStepsFutB{} steps, against \nMedStepsClean{} for A in normal runs. B's goal check never fired in normal or
-instruction-swapped runs (0/300). The robot does not merely fail task~A; it performs the task it imagines. The
-instruction still matters, through the imagination it produces, but given a fixed imagined future the action
-transformer's own access to the instruction has no measurable effect.
+\nFutBPooled{} (\nFutBSeeds{} per seed). It does so fluently: B's goal is reached after a median of
+\nMedStepsFutB{} steps, against \nMedStepsClean{} for A in normal runs (seed 42). B's goal check never fired in
+normal, imagination-off or instruction-swapped runs (0/450). The robot does not merely fail task~A; it performs the task
+it imagines. The instruction still matters, through the imagination it produces, but given a fixed imagined future the
+action transformer's own access to the instruction has no measurable effect. Taken together, the four conditions show
+why success rates cannot settle the test-time debate: the policy does not need its imagination, yet when it has one,
+it follows it.
 
 \begin{figure}[t]
 \centering
@@ -408,19 +419,21 @@ attacks have been shown to decouple a WAM's actions from its imagination~\cite{l
 imagination of imagine-then-act models~\cite{chen2026trusted}; our results show that when the imagination is
 coherent but wrong, the action follows it.
 
-\textbf{On the test-time debate.} Our results are compatible with Fast-WAM's finding that imagination is not required
-for success~\cite{yuan2026fastwam}: in open loop, first-frame actions are as accurate as imagine-mode actions. They add
+\textbf{On the test-time debate.} Our results reproduce Fast-WAM's finding that imagination is not required
+for success~\cite{yuan2026fastwam}: in closed loop, first-frame mode succeeds as often as imagine mode
+(\nNoImgAPooledPct\% vs.\ \nCleanAPooledPct\%), and in open loop its actions are as close to the demonstrations. They add
 that when imagination is present, it is not ignored; it dominates the action. Success rates alone cannot distinguish
 these situations. How much a WAM depends on its future also varies with design: masking the future collapses success
 in a jointly denoising Fast-WAM variant~\cite{zhang2026rift}, whereas in the Optional-IDM checkpoint masking reproduces
 the first-frame mode it was also trained for. Whether imagination helps under harder or perturbed conditions, the claim of~\cite{li2026lawa}, is a
 question our patching protocol can address directly.
 
-\textbf{Limitations.} We study one WAM whose action transformer is trained as an inverse dynamics reader, so reliance on
-the future is encouraged by design; that it nonetheless ignores its own instruction access, and how and where the
-future is read, are not implied by the design, but other WAM architectures, in which video and actions are denoised
-jointly, need the same test. Our closed-loop evidence covers one LIBERO suite with ten tasks in one scene, five starting
-states per task and three seeds, in simulation; real-robot validation is future work. The B goal is checked every ten
+\textbf{Limitations.} We study one WAM whose action transformer is trained as an inverse dynamics reader, so some
+reliance on the future is expected by design. The design does not predict that the action ignores its own instruction,
+nor where and how the future is read; WAMs that denoise video and actions jointly need the same test. Our closed-loop
+evidence covers one LIBERO suite with ten tasks in one scene, five starting states per task and three seeds, in
+simulation; real-robot validation is future work. With 150 episodes per condition, success rates near 98\% can only
+reveal differences of several points, so a small benefit of imagination would go unseen. The B goal is checked every ten
 steps. The lens shows what is decodable, not what is used; the claim that late layers decide rests on the patching and
 closed-loop experiments, which agree with it.
 
@@ -428,7 +441,8 @@ closed-loop experiments, which agree with it.
 
 We asked whether a world action model acts on what it imagines and answered by intervening on the imagined future
 inside the model. In Fast-WAM, it does: the imagined future rewrites the action, and in closed loop the robot carries out
-the task it imagines rather than the task it is told. The information enters early but is decided in the last ten
+the task it imagines rather than the task it is told, although it succeeds just as often with no imagination at all.
+The information enters early but is decided in the last ten
 layers, read from the tokens where imagined outcomes differ, through a few heads. Patching the imagined future gives a
 direct, causal tool for evaluating, monitoring and steering video-based robot policies.
 

@@ -29,14 +29,16 @@ fresh = J("pilot_future_swap_rollouts_s0/analysis.json")      # fresh closed-loo
 flip = J("flip_test/flip_summary.json")
 p1 = J("phase1/flip_test/phase1_layers_dose.json")
 seeds = J("phase1/flip_test/phase1_seeds.json")
+seeds.update({k.replace("noimag", "noimg"): v for k, v in J("phase1/flip_test/noimagine_summary.json").items()
+              if k.startswith("noimag")})   # imagination off (first-frame mode), same 150 episodes
 p2 = J("phase2_s0/analysis.json")
 lens = J("phase2_lens3/analysis.json")
 
 # ---------------------------------------------------------------- Fig. 2: closed-loop flip, three seeds
-fig, ax = plt.subplots(figsize=(W1, 1.55))
-conds = [("clean", "Normal\n(imagine A, told A)"), ("textB", "Swap instruction\n(imagine A, told B)"),
-         ("futB", "Swap imagination\n(imagine B, told A)")]
-x = np.arange(3)
+fig, ax = plt.subplots(figsize=(W1, 1.85))
+conds = [("clean", "Normal\n\n(imagine A,\ntold A)"), ("noimg", "Imagination\noff\n(no future,\ntold A)"),
+         ("textB", "Swap\ninstruction\n(imagine A,\ntold B)"), ("futB", "Swap\nimagination\n(imagine B,\ntold A)")]
+x = np.arange(len(conds))
 for k, (key, col, lab) in enumerate((("A", A_COL, "task A done"), ("B", B_COL, "task B done"))):
     vals = [[seeds[f"{c}_{s}"][key][1] for s in ("s42", "s0", "s1")] for c, _ in conds]
     m = [np.mean(v) for v in vals]
@@ -44,7 +46,7 @@ for k, (key, col, lab) in enumerate((("A", A_COL, "task A done"), ("B", B_COL, "
     for i, v in enumerate(vals):
         ax.scatter([x[i] + (k - 0.5) * 0.36] * 3, v, s=6, color="k", zorder=3, linewidths=0)
         ax.text(x[i] + (k - 0.5) * 0.36, max(v) + 0.05, f"{m[i]:.0%}", ha="center", fontsize=6.5)
-ax.set_xticks(x, [c[1] for c in conds], fontsize=6.8)
+ax.set_xticks(x, [c[1] for c in conds], fontsize=6.3)
 ax.set_ylim(0, 1.32)
 ax.set_yticks([0, .5, 1], ["0%", "50%", "100%"])
 ax.set_ylabel("episodes (of 50)")
@@ -163,9 +165,24 @@ sB = [seeds[f"futB_{s}"]["B"][0] for s in ("s42", "s0", "s1")]
 sA = [seeds[f"futB_{s}"]["A"][0] for s in ("s42", "s0", "s1")]
 tA = [seeds[f"textB_{s}"]["A"][0] for s in ("s42", "s0", "s1")]
 cA = [seeds[f"clean_{s}"]["A"][0] for s in ("s42", "s0", "s1")]
+nA = [seeds[f"noimg_{s}"]["A"][0] for s in ("s42", "s0", "s1")]
+nB = [seeds[f"noimg_{s}"]["B"][0] for s in ("s42", "s0", "s1")]
+
+
+def wilson(k, n, z=1.96):
+    c, h = (k + z * z / 2) / (n + z * z), z * np.sqrt(k * (n - k) / n + z * z / 4) / (n + z * z)
+    return pct(c - h), pct(c + h)
+
+
 N.update(FutBPooled=str(sum(sB)), FutBPooledPct=pct(sum(sB) / 150), FutAPooled=str(sum(sA)),
          TextAPooled=str(sum(tA)), TextAPooledPct=pct(sum(tA) / 150), CleanAPooled=str(sum(cA)),
-         CleanAPooledPct=pct(sum(cA) / 150), FutBSeeds="/".join(map(str, sB)), TextASeeds="/".join(map(str, tA)))
+         CleanAPooledPct=pct(sum(cA) / 150), FutBSeeds="/".join(map(str, sB)), TextASeeds="/".join(map(str, tA)),
+         CleanASeeds="/".join(map(str, cA)), NoImgAPooled=str(sum(nA)), NoImgAPooledPct=pct(sum(nA) / 150),
+         NoImgASeeds="/".join(map(str, nA)), NoImgBPooled=str(sum(nB)))
+N["CleanACILo"], N["CleanACIHi"] = wilson(sum(cA), 150)
+N["NoImgACILo"], N["NoImgACIHi"] = wilson(sum(nA), 150)
+st = lambda c: [x for s in ("s42", "s0", "s1") for x in seeds[f"{c}_{s}"]["A_steps_success"]]  # noqa: E731
+N["MedStepsCleanPooled"], N["MedStepsNoImgPooled"] = f"{np.median(st('clean')):.0f}", f"{np.median(st('noimg')):.0f}"
 e4 = p2["exp4"]
 for k, nm in (("fut|all", "PAll"), ("top50|all", "PTop"), ("rand50|all", "PRand"), ("bottom50|all", "PBottom"),
               ("frame1|all", "PFOne"), ("frame2|all", "PFTwo"), ("main|all", "PMain"), ("wrist|all", "PWrist")):
